@@ -1,14 +1,83 @@
 import Navbar from '@/Components/Navbar';
 import { Head } from '@inertiajs/react';
 
+const PricingCard = ({ tier, price, popular, features }) => (
+  <div className="card w-96 bg-base-100 shadow-sm">
+    <div className="card-body">
+      <div className="flex justify-between">
+        <h2 className="text-3xl font-bold">{tier}</h2>
+        <span className="text-xl">${price}/mo</span>
+      </div>
+      <ul className="mt-6 flex flex-col gap-2 text-xs">
+        {features.map((feature, index) => (
+          <li key={index} className={feature.disabled ? 'opacity-50' : ''}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`me-2 inline-block size-4 ${
+                feature.disabled ? 'text-base-content/50' : 'text-success'
+              }`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <span className={feature.disabled ? 'line-through' : ''}>
+              {feature.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6">
+        <button className="btn btn-primary btn-block">Subscribe</button>
+      </div>
+    </div>
+  </div>
+);
+
 export default function Welcome({ auth, laravelVersion, phpVersion }) {
+  const pricingTiers = [
+    {
+      tier: 'Basic',
+      price: '9',
+      popular: false,
+      features: [
+        { text: 'Half a month', disabled: false },
+        { text: '1 Admin', disabled: false },
+      ],
+    },
+    {
+      tier: 'Premium',
+      price: '29',
+      popular: true,
+      features: [
+        { text: '1 month', disabled: false },
+        { text: '3 Admins', disabled: false },
+      ],
+    },
+    {
+      tier: 'Enterprise',
+      price: '99',
+      popular: false,
+      features: [
+        { text: '6 months', disabled: false },
+        { text: 'Unlimited Admins', disabled: false },
+      ],
+    },
+  ];
+
   return (
     <>
       <Head title="Welcome" />
-      <div className="bg-base-100 min-h-screen">
+      <div className="min-h-screen bg-base-100">
         <Navbar auth={auth} />
 
-        <div className="hero bg-base-200 min-h-[calc(100vh-4rem)]">
+        <div className="hero bg-base-200 py-12">
           <div className="hero-content text-center">
             <div className="max-w-md">
               <h1 className="text-5xl font-bold">Review Platform</h1>
@@ -16,8 +85,18 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                 Welcome to the most comprehensive review platform. Share your
                 thoughts, read reviews, and make informed decisions.
               </p>
-              <button className="btn btn-primary">Get Started</button>
             </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto py-12">
+          <h2 className="mb-12 text-center text-3xl font-bold">
+            Choose Your Plan
+          </h2>
+          <div className="flex flex-wrap justify-center gap-8">
+            {pricingTiers.map((tier, index) => (
+              <PricingCard key={index} {...tier} />
+            ))}
           </div>
         </div>
       </div>

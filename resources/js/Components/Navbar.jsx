@@ -82,12 +82,12 @@ export default function Navbar({ auth }) {
             >
               Log in
             </button>
-            <button
+            {/* <button
               onClick={() => setShowRegisterModal(true)}
               className="btn btn-primary ml-2"
             >
               Register
-            </button>
+            </button> */}
           </>
         )}
       </div>
