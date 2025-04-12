@@ -1,0 +1,52 @@
+<?php
+
+use Stancl\Tenancy\Database\Models\Domain;
+use Stancl\Tenancy\Database\Models\Tenant;
+
+return [
+    'tenant_model' => \App\Models\Tenant::class,
+    'domain_model' => Domain::class,
+
+    'database' => [
+        'central_connection' => env('DB_CONNECTION', 'mysql'),
+        'template_tenant_connection' => null,
+        'prefix' => 'tenant',
+        'suffix' => '',
+    ],
+
+    'domain_model' => Domain::class,
+    
+    'central_domains' => [
+        '127.0.0.1',
+        'localhost',
+        env('APP_DOMAIN', 'localhost'),
+    ],
+
+    'identification' => [
+        'domain' => [
+            'enable' => true,
+            'exclude' => [
+                '/',
+                '/login',
+                '/logout',
+                '/dashboard',
+                '/profile',
+                '/tenant/register',
+                '/forgot-password',
+                '/reset-password',
+                '/verify-email',
+            ],
+        ],
+    ],
+
+    'bootstrappers' => [
+        Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
+        Stancl\Tenancy\Bootstrappers\CacheTenancyBootstrapper::class,
+        Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper::class,
+        Stancl\Tenancy\Bootstrappers\QueueTenancyBootstrapper::class,
+    ],
+];
+
+
+
+

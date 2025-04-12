@@ -4,6 +4,7 @@ import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useEffect } from 'react';
 
 export default function Register({ show, onClose }) {
   const { data, setData, post, processing, errors, reset } = useForm({
@@ -13,13 +14,20 @@ export default function Register({ show, onClose }) {
     password_confirmation: '',
   });
 
+  useEffect(() => {
+    return () => {
+      reset('password', 'password_confirmation');
+    };
+  }, []);
+
   const submit = (e) => {
     e.preventDefault();
 
     post(route('register'), {
-      onFinish: () => {
-        reset('password', 'password_confirmation');
-        onClose();
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        if (onClose) onClose();
       },
     });
   };

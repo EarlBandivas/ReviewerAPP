@@ -2,8 +2,14 @@ import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
-  const user = usePage().props.auth.user;
+  const { auth } = usePage().props;
+  const user = auth?.user; // Add optional chaining
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Redirect or show error if no user
+  if (!user) {
+    return <div>Not authenticated</div>; // Or redirect to login
+  }
 
   return (
     <div className="min-h-screen bg-base-200">
