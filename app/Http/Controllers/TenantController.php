@@ -15,9 +15,19 @@ use Illuminate\Validation\Rule;
 use Stancl\Tenancy\Database\Models\Domain;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-
+use App\Mail\TenantApproved;
+use App\Mail\TenantRejected;
 class TenantController extends Controller
 {
+    public function index()
+    {
+        $tenants = Tenant::with('subscription')->orderBy('created_at', 'desc')->get();
+        
+        return Inertia::render('Dashboard', [
+            'tenants' => $tenants
+        ]);
+    }
+
     public function register(Request $request)
     {
         try {
@@ -147,7 +157,63 @@ class TenantController extends Controller
             ], 500);
         }
     }
+
+    public function action(Request $request)
+    {
+        $validated = $request->validate([
+            'tenant_id' => 'required|string|exists:tenants,id',
+            'action' => 'required|string|in:approve,reject'
+        ]);
+
+        $tenant = Tenant::findOrFail($validated['tenant_id']);
+
+        if ($validated['action'] === 'approve') {
+            // Generate a new password
+            $password = Str::random(12);
+            $tenant->temporary_password = bcrypt($password);
+            $tenant->status = 'approved';
+            
+            // Send approval email with credentials
+            Mail::to($tenant->contact_email)->send(new TenantApproved([
+                'companyName' => $tenant->company_name,
+                'contactName' => $tenant->contact_name,
+                'subdomain' => $tenant->id,
+                'password' => $password,
+                'loginUrl' => config('app.protocol', 'https') . '://' . $tenant->id . '.' . config('app.domain'),
+            ]));
+
+            $tenant->save();
+        } else {
+            // Send rejection email before deleting
+            Mail::to($tenant->contact_email)->send(new TenantRejected([
+                'companyName' => $tenant->company_name,
+                'contactName' => $tenant->contact_name,
+            ]));
+
+            // Delete the tenant and related data
+            $tenant->subscription()->delete();
+            $tenant->domains()->delete();
+            $tenant->delete();
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function view($id)
+    {
+        $tenant = Tenant::with('subscription')->findOrFail($id);
+        
+        return response()->json([
+            'tenant' => $tenant
+        ]);
+    }
 }
+
+
+
+
+
+
 
 
 

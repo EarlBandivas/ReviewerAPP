@@ -27,6 +27,11 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'data' => 'array',
     ];
 
+    public function subscription()
+    {
+        return $this->hasOne(TenantSubscription::class);
+    }
+
     public static function getCustomColumns(): array
     {
         return [
@@ -39,5 +44,6 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         ];
     }
 }
+
 
 

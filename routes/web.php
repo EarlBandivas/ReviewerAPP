@@ -36,10 +36,14 @@ Route::middleware(['web', 'ensure.central.domain'])->group(function () {
     });
 
     // Protected routes
-    Route::middleware('auth')->group(function () {
-        Route::get('/dashboard', function () {
-            return Inertia::render('Dashboard');
-        })->name('dashboard');
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/dashboard', [TenantController::class, 'index'])->name('dashboard');
+        
+        // Add the tenant view route
+        Route::get('/tenant/{id}', [TenantController::class, 'view'])->name('tenant.view');
+
+        // Add the tenant action route if not already defined
+        Route::post('/tenant/action', [TenantController::class, 'action'])->name('tenant.action');
 
         Route::get('/profile', [ProfileController::class, 'edit'])
             ->name('profile.edit');
@@ -48,7 +52,6 @@ Route::middleware(['web', 'ensure.central.domain'])->group(function () {
         Route::delete('/profile', [ProfileController::class, 'destroy'])
             ->name('profile.destroy');
 
-        // Add the logout route
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
             ->name('logout');
     });
@@ -66,6 +69,12 @@ Route::middleware([
 ])->group(function () {
     // Tenant specific routes here
 });
+
+
+
+
+
+
 
 
 
