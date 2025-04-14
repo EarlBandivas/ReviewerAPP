@@ -7,7 +7,6 @@ use App\Models\TenantSubscription;
 use App\Notifications\TenantAdminCredentials;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TenantRegistrationPending;
@@ -17,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Mail\TenantApproved;
 use App\Mail\TenantRejected;
+use Illuminate\Support\Facades\Artisan;
+use Stancl\Tenancy\Database\DatabaseManager;
 class TenantController extends Controller
 {
     public function index()
@@ -160,43 +161,137 @@ class TenantController extends Controller
 
     public function action(Request $request)
     {
-        $validated = $request->validate([
-            'tenant_id' => 'required|string|exists:tenants,id',
-            'action' => 'required|string|in:approve,reject'
-        ]);
-
-        $tenant = Tenant::findOrFail($validated['tenant_id']);
-
-        if ($validated['action'] === 'approve') {
-            // Generate a new password
-            $password = Str::random(12);
-            $tenant->temporary_password = bcrypt($password);
-            $tenant->status = 'approved';
+        try {
+            $validated = $request->validate([
+                'tenant_id' => 'required|string|exists:tenants,id',
+                'action' => 'required|string|in:approve,reject'
+            ]);
             
-            // Send approval email with credentials
-            Mail::to($tenant->contact_email)->send(new TenantApproved([
-                'companyName' => $tenant->company_name,
-                'contactName' => $tenant->contact_name,
-                'subdomain' => $tenant->id,
-                'password' => $password,
-                'loginUrl' => config('app.protocol', 'https') . '://' . $tenant->id . '.' . config('app.domain'),
-            ]));
+            $tenant = Tenant::findOrFail($validated['tenant_id']);
+            
+            if ($validated['action'] === 'approve') {
+                // Generate a new password
+                $password = Str::random(12);
+                $tenant->temporary_password = bcrypt($password);
+                $tenant->status = 'approved';
+                
+                if (!$tenant->save()) {
+                    throw new \Exception('Failed to update tenant status');
+                }
 
-            $tenant->save();
-        } else {
-            // Send rejection email before deleting
-            Mail::to($tenant->contact_email)->send(new TenantRejected([
-                'companyName' => $tenant->company_name,
-                'contactName' => $tenant->contact_name,
-            ]));
+                Log::info('Initializing tenant', ['tenant_id' => $tenant->id]);
 
-            // Delete the tenant and related data
-            $tenant->subscription()->delete();
-            $tenant->domains()->delete();
-            $tenant->delete();
+                // Delete any existing domains for this tenant
+                $tenant->domains()->delete();
+
+                // Create new domain
+                $domain = $tenant->domains()->create([
+                    'domain' => $tenant->id . '.' . config('app.domain')
+                ]);
+
+                if (!$domain) {
+                    throw new \Exception('Failed to create domain record');
+                }
+
+                // Create the tenant database
+                $databaseName = 'tenant_' . $tenant->id;
+                DB::statement("DROP DATABASE IF EXISTS `$databaseName`");
+                DB::statement("CREATE DATABASE `$databaseName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+                // Configure the tenant connection with the new database
+                config([
+                    'database.connections.tenant.database' => $databaseName
+                ]);
+
+                // Initialize tenancy to switch to the tenant's context
+                tenancy()->initialize($tenant);
+
+                Log::info('Running migrations for tenant', ['tenant_id' => $tenant->id]);
+                
+                // Run migrations in tenant database context
+                Artisan::call('migrate', [
+                    '--force' => true,
+                    '--path' => 'database/migrations/tenant',
+                    '--database' => 'tenant'
+                ]);
+
+                // Create the admin user in the tenant's database context
+                try {
+                    Log::info('Creating admin user', ['tenant_id' => $tenant->id]);
+                    
+                    $admin = \App\Models\User::create([
+                        'name' => $tenant->contact_name,
+                        'email' => $tenant->contact_email,
+                        'password' => bcrypt($password),
+                        'email_verified_at' => now(),
+                    ]);
+
+                    if (!$admin) {
+                        throw new \Exception('Failed to create admin user');
+                    }
+                } finally {
+                    // Always ensure we end tenancy and return to central context
+                    tenancy()->end();
+                }
+                
+                Log::info('Sending approval email', ['tenant_id' => $tenant->id]);
+                Mail::to($tenant->contact_email)->send(new TenantApproved([
+                    'companyName' => $tenant->company_name,
+                    'contactName' => $tenant->contact_name,
+                    'contact_email' => $tenant->contact_email,
+                    'subdomain' => $tenant->id,
+                    'password' => $password,
+                    'loginUrl' => 'https://' . $tenant->id . '.' . config('app.domain'),
+                ]));
+
+            } else {
+                try {
+                    Log::info('Sending rejection email', ['tenant_id' => $tenant->id]);
+                    Mail::to($tenant->contact_email)->send(new TenantRejected([
+                        'companyName' => $tenant->company_name,
+                        'contactName' => $tenant->contact_name,
+                    ]));
+
+                    Log::info('Deleting tenant data', ['tenant_id' => $tenant->id]);
+                    // Delete all related data
+                    $tenant->domains()->delete();
+                    if ($tenant->subscription) {
+                        $tenant->subscription()->delete();
+                    }
+                    $tenant->delete();
+
+                } catch (\Exception $e) {
+                    Log::error('Failed during tenant rejection process', [
+                        'tenant_id' => $tenant->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    throw $e;
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => $validated['action'] === 'approve' 
+                    ? 'Tenant approved successfully' 
+                    : 'Tenant rejected successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            tenancy()->end();
+            
+            Log::error('Tenant action failed', [
+                'action' => $request->input('action'),
+                'tenant_id' => $request->input('tenant_id'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process tenant: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json(['success' => true]);
     }
 
     public function view($id)
@@ -208,6 +303,25 @@ class TenantController extends Controller
         ]);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

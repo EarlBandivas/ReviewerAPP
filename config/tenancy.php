@@ -9,7 +9,10 @@ return [
 
     'database' => [
         'central_connection' => env('DB_CONNECTION', 'mysql'),
-        'template_tenant_connection' => null,
+        
+        // The tenant connection that will be used to connect to tenant databases
+        'tenant_connection' => env('TENANT_DB_CONNECTION', 'tenant'),
+        
         'prefix' => 'tenant',
         'suffix' => '',
     ],
@@ -46,6 +49,7 @@ return [
         Stancl\Tenancy\Bootstrappers\QueueTenancyBootstrapper::class,
     ],
 ];
+
 
 
 

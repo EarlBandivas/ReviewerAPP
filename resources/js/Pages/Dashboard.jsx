@@ -17,11 +17,21 @@ export default function Dashboard({ tenants }) {
         action: action,
       });
 
-      // Refresh the page to show updated data
-      window.location.reload();
+      if (response.data.success) {
+        // Show success message
+        alert(response.data.message);
+        // Refresh the page to show updated data
+        window.location.reload();
+      } else {
+        throw new Error(response.data.message);
+      }
     } catch (error) {
       console.error('Action failed:', error);
-      alert('Failed to process the action. Please try again.');
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to process the action. Please try again.';
+      alert(errorMessage);
     } finally {
       setLoading((prev) => ({ ...prev, [tenantId]: false }));
     }
@@ -40,7 +50,7 @@ export default function Dashboard({ tenants }) {
         <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
           <div className="p-6">
             <h2 className="mb-4 text-xl font-semibold">Tenant Applications</h2>
-            <div className="overflow-x-auto">
+            <div className="border-base-content/5 overflow-x-auto rounded-box border">
               <table className="table table-zebra w-full">
                 <thead className="text-black">
                   <tr>
@@ -80,14 +90,14 @@ export default function Dashboard({ tenants }) {
                         {tenant.status === 'pending' && (
                           <>
                             <button
-                              className="btn btn-success btn-sm"
+                              className="btn btn-success btn-sm text-black"
                               onClick={() => handleAction(tenant.id, 'approve')}
                               disabled={loading[tenant.id]}
                             >
                               {loading[tenant.id] ? 'Processing...' : 'Approve'}
                             </button>
                             <button
-                              className="btn btn-error btn-sm"
+                              className="btn btn-error btn-sm text-black"
                               onClick={() => handleAction(tenant.id, 'reject')}
                               disabled={loading[tenant.id]}
                             >
