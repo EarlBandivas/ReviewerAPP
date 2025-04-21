@@ -234,15 +234,38 @@ class TenantController extends Controller
                     tenancy()->end();
                 }
                 
-                Log::info('Sending approval email', ['tenant_id' => $tenant->id]);
-                Mail::to($tenant->contact_email)->send(new TenantApproved([
-                    'companyName' => $tenant->company_name,
-                    'contactName' => $tenant->contact_name,
-                    'contact_email' => $tenant->contact_email,
-                    'subdomain' => $tenant->id,
-                    'password' => $password,
-                    'loginUrl' => 'https://' . $tenant->id . '.' . config('app.domain'),
-                ]));
+                Log::info('Sending approval email to tenant', [
+                    'email' => $tenant->contact_email,
+                    'company' => $tenant->company_name
+                ]);
+
+                // Add more detailed logging
+                Log::info('Preparing to send approval email', [
+                    'tenant_email' => $tenant->contact_email,
+                    'tenant_name' => $tenant->contact_name,
+                    'company' => $tenant->company_name
+                ]);
+
+                try {
+                    Mail::to($tenant->contact_email)->send(new TenantApproved([
+                        'companyName' => $tenant->company_name,
+                        'contactName' => $tenant->contact_name,
+                        'contact_email' => $tenant->contact_email,
+                        'subdomain' => $tenant->id,
+                        'password' => $password,
+                        'loginUrl' => 'https://' . $tenant->id . '.' . config('app.domain'),
+                    ]));
+
+                    Log::info('Approval email sent successfully', [
+                        'tenant_email' => $tenant->contact_email
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send approval email', [
+                        'error' => $e->getMessage(),
+                        'tenant_email' => $tenant->contact_email
+                    ]);
+                    throw $e;
+                }
 
             } else {
                 try {
@@ -302,7 +325,83 @@ class TenantController extends Controller
             'tenant' => $tenant
         ]);
     }
+
+    public function updateSubscription(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'tenant_id' => 'required|string|exists:tenants,id',
+                'plan_name' => 'required|string',
+                'price' => 'required|numeric|min:0',
+            ]);
+
+            $tenant = Tenant::findOrFail($validated['tenant_id']);
+            
+            if (!$tenant->subscription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No subscription found for this tenant'
+                ], 404);
+            }
+
+            $tenant->subscription->update([
+                'plan_name' => $validated['plan_name'],
+                'price' => $validated['price'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Subscription updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Subscription update failed', [
+                'tenant_id' => $request->input('tenant_id'),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update subscription: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function toggleStatus(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'tenant_id' => 'required|string|exists:tenants,id',
+                'is_disabled' => 'required|boolean'
+            ]);
+
+            $tenant = Tenant::findOrFail($validated['tenant_id']);
+            $tenant->is_disabled = $validated['is_disabled'];
+            $tenant->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => $tenant->is_disabled ? 'Tenant disabled successfully' : 'Tenant enabled successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Tenant status toggle failed', [
+                'tenant_id' => $request->input('tenant_id'),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update tenant status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
+
+
+
+
+
+
+
 
 
 

@@ -18,6 +18,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'phone',
         'contact_name',
         'contact_email',
+        'is_disabled',
     ];
 
     public $incrementing = false;
@@ -25,6 +26,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     protected $casts = [
         'data' => 'array',
+        'is_disabled' => 'boolean',
     ];
 
     public function subscription()
@@ -41,6 +43,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'phone',
             'contact_name',
             'contact_email',
+            'is_disabled',
         ];
     }
 }

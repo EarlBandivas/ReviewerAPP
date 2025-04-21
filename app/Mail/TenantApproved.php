@@ -12,20 +12,15 @@ class TenantApproved extends Mailable
 
     public $data;
 
-    /**
-     * Create a new message instance.
-     */
     public function __construct($data)
     {
         $this->data = $data;
     }
 
-    /**
-     * Build the message.
-     */
     public function build()
     {
         return $this->markdown('emails.tenant-approved')
                     ->subject('Your Registration Has Been Approved');
     }
 }
+

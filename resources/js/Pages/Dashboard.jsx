@@ -1,4 +1,6 @@
+import EditSubscriptionModal from '@/Components/EditSubscriptionModal';
 import TenantViewModal from '@/Components/TenantViewModal';
+import Toast from '@/Components/Toast';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
@@ -8,6 +10,13 @@ export default function Dashboard({ tenants }) {
   const [loading, setLoading] = useState({});
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditSubscriptionModal, setShowEditSubscriptionModal] =
+    useState(false);
+  const [toast, setToast] = useState({
+    show: false,
+    message: '',
+    type: 'success',
+  });
 
   const handleAction = async (tenantId, action) => {
     setLoading((prev) => ({ ...prev, [tenantId]: true }));
@@ -18,8 +27,11 @@ export default function Dashboard({ tenants }) {
       });
 
       if (response.data.success) {
-        // Show success message
-        alert(response.data.message);
+        setToast({
+          show: true,
+          message: response.data.message,
+          type: 'success',
+        });
         // Refresh the page to show updated data
         window.location.reload();
       } else {
@@ -31,9 +43,42 @@ export default function Dashboard({ tenants }) {
         error.response?.data?.message ||
         error.message ||
         'Failed to process the action. Please try again.';
-      alert(errorMessage);
+
+      setToast({
+        show: true,
+        message: errorMessage,
+        type: 'error',
+      });
     } finally {
       setLoading((prev) => ({ ...prev, [tenantId]: false }));
+    }
+  };
+
+  const handleToggleStatus = async (tenant) => {
+    setLoading((prev) => ({ ...prev, [tenant.id]: true }));
+    try {
+      const response = await axios.post(route('tenant.toggle-status'), {
+        tenant_id: tenant.id,
+        is_disabled: !tenant.is_disabled,
+      });
+
+      if (response.data.success) {
+        setToast({
+          show: true,
+          message: response.data.message,
+          type: 'success',
+        });
+        window.location.reload();
+      }
+    } catch (error) {
+      setToast({
+        show: true,
+        message:
+          error.response?.data?.message || 'Failed to update tenant status',
+        type: 'error',
+      });
+    } finally {
+      setLoading((prev) => ({ ...prev, [tenant.id]: false }));
     }
   };
 
@@ -46,13 +91,13 @@ export default function Dashboard({ tenants }) {
   return (
     <AuthenticatedLayout>
       <Head title="Dashboard" />
-      <div className="mx-auto max-w-7xl text-black sm:px-6 lg:px-8">
-        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+      <div className="mx-auto max-w-7xl text-white sm:px-6 lg:px-8">
+        <div className="overflow-hidden bg-base-100 sm:rounded-lg">
           <div className="p-6">
             <h2 className="mb-4 text-xl font-semibold">Tenant Applications</h2>
-            <div className="border-base-content/5 overflow-x-auto rounded-box border">
-              <table className="table table-zebra w-full">
-                <thead className="text-black">
+            <div className="overflow-x-auto">
+              <table className="table w-full">
+                <thead className="text-white">
                   <tr>
                     <th>Company Name</th>
                     <th>Contact Person</th>
@@ -105,6 +150,26 @@ export default function Dashboard({ tenants }) {
                             </button>
                           </>
                         )}
+                        {tenant.status === 'approved' && (
+                          <>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => {
+                                setSelectedTenant(tenant);
+                                setShowEditSubscriptionModal(true);
+                              }}
+                            >
+                              Edit Plan
+                            </button>
+                            <button
+                              className={`btn btn-sm ${tenant.is_disabled ? 'btn-success' : 'btn-error'}`}
+                              onClick={() => handleToggleStatus(tenant)}
+                              disabled={loading[tenant.id]}
+                            >
+                              {tenant.is_disabled ? 'Enable' : 'Disable'}
+                            </button>
+                          </>
+                        )}
                         <button
                           className="btn btn-info btn-sm"
                           onClick={() => handleViewTenant(tenant)}
@@ -128,6 +193,30 @@ export default function Dashboard({ tenants }) {
           setSelectedTenant(null);
         }}
         tenant={selectedTenant}
+      />
+
+      <EditSubscriptionModal
+        show={showEditSubscriptionModal}
+        onClose={() => {
+          setShowEditSubscriptionModal(false);
+          setSelectedTenant(null);
+        }}
+        tenant={selectedTenant}
+        onSuccess={(message) => {
+          setToast({
+            show: true,
+            message,
+            type: 'success',
+          });
+          window.location.reload();
+        }}
+      />
+
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
       />
     </AuthenticatedLayout>
   );

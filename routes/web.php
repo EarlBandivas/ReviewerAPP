@@ -54,6 +54,11 @@ Route::middleware(['web', 'ensure.central.domain'])->group(function () {
 
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
             ->name('logout');
+
+        Route::post('/tenant/update-subscription', [TenantController::class, 'updateSubscription'])
+            ->name('tenant.update-subscription');
+        Route::post('/tenant/toggle-status', [TenantController::class, 'toggleStatus'])
+            ->name('tenant.toggle-status');
     });
 
     // Tenant registration
@@ -69,6 +74,7 @@ Route::middleware([
 ])->group(function () {
     // Tenant specific routes here
 });
+
 
 
 
