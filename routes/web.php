@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\TenantController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AnalyticsController;
 use Inertia\Inertia;
 
 // Central domain routes
@@ -59,6 +60,8 @@ Route::middleware(['web', 'ensure.central.domain'])->group(function () {
             ->name('tenant.update-subscription');
         Route::post('/tenant/toggle-status', [TenantController::class, 'toggleStatus'])
             ->name('tenant.toggle-status');
+
+        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
     });
 
     // Tenant registration
@@ -74,6 +77,9 @@ Route::middleware([
 ])->group(function () {
     // Tenant specific routes here
 });
+
+
+
 
 
 

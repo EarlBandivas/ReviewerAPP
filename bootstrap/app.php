@@ -33,11 +33,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'ensure.central.domain' => \App\Http\Middleware\EnsureCentralDomain::class,
+            'prevent.tenant.registration' => \App\Http\Middleware\PreventTenantRegistration::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+
 
 
 

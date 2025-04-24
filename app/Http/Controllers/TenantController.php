@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
-use App\Notifications\TenantAdminCredentials;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,7 +16,7 @@ use Inertia\Inertia;
 use App\Mail\TenantApproved;
 use App\Mail\TenantRejected;
 use Illuminate\Support\Facades\Artisan;
-use Stancl\Tenancy\Database\DatabaseManager;
+
 class TenantController extends Controller
 {
     public function index()
@@ -170,7 +169,6 @@ class TenantController extends Controller
             $tenant = Tenant::findOrFail($validated['tenant_id']);
             
             if ($validated['action'] === 'approve') {
-                // Generate a new password
                 $password = Str::random(12);
                 $tenant->temporary_password = bcrypt($password);
                 $tenant->status = 'approved';
@@ -179,61 +177,41 @@ class TenantController extends Controller
                     throw new \Exception('Failed to update tenant status');
                 }
 
-                Log::info('Initializing tenant', ['tenant_id' => $tenant->id]);
-
-                // Delete any existing domains for this tenant
-                $tenant->domains()->delete();
-
-                // Create new domain
-                $domain = $tenant->domains()->create([
-                    'domain' => $tenant->id . '.' . config('app.domain')
-                ]);
-
-                if (!$domain) {
-                    throw new \Exception('Failed to create domain record');
-                }
-
                 // Create the tenant database
                 $databaseName = 'tenant_' . $tenant->id;
                 DB::statement("DROP DATABASE IF EXISTS `$databaseName`");
                 DB::statement("CREATE DATABASE `$databaseName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-                // Configure the tenant connection with the new database
+                // Configure the tenant connection
                 config([
                     'database.connections.tenant.database' => $databaseName
                 ]);
 
-                // Initialize tenancy to switch to the tenant's context
+                // Initialize tenancy
                 tenancy()->initialize($tenant);
 
-                Log::info('Running migrations for tenant', ['tenant_id' => $tenant->id]);
-                
-                // Run migrations in tenant database context
-                Artisan::call('migrate', [
-                    '--force' => true,
-                    '--path' => 'database/migrations/tenant',
-                    '--database' => 'tenant'
-                ]);
-
-                // Create the admin user in the tenant's database context
                 try {
-                    Log::info('Creating admin user', ['tenant_id' => $tenant->id]);
-                    
-                    $admin = \App\Models\User::create([
+                    // Run migrations
+                    Artisan::call('migrate', [
+                        '--force' => true,
+                        '--path' => 'database/migrations/tenant',
+                        '--database' => 'tenant'
+                    ]);
+
+                    // Create admin user in tenant database
+                    DB::connection('tenant')->table('users')->insert([
                         'name' => $tenant->contact_name,
                         'email' => $tenant->contact_email,
                         'password' => bcrypt($password),
                         'email_verified_at' => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
 
-                    if (!$admin) {
-                        throw new \Exception('Failed to create admin user');
-                    }
                 } finally {
-                    // Always ensure we end tenancy and return to central context
                     tenancy()->end();
                 }
-                
+
                 Log::info('Sending approval email to tenant', [
                     'email' => $tenant->contact_email,
                     'company' => $tenant->company_name
@@ -395,6 +373,8 @@ class TenantController extends Controller
         }
     }
 }
+
+
 
 
 
