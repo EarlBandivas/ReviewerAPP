@@ -17,12 +17,27 @@ class DebugTenancy extends Command
         // Check domains table
         $domains = DB::table('domains')->get();
         $this->info('Domains table contents:');
-        $this->table(['id', 'domain', 'tenant_id', 'created_at'], $domains->toArray());
+        $domainsArray = $domains->map(function($domain) {
+            return [
+                $domain->id,
+                $domain->domain,
+                $domain->tenant_id,
+                $domain->created_at
+            ];
+        })->toArray();
+        $this->table(['id', 'domain', 'tenant_id', 'created_at'], $domainsArray);
 
         // Check tenants table
         $tenants = DB::table('tenants')->get();
         $this->info('Tenants table contents:');
-        $this->table(['id', 'company_name', 'created_at'], $tenants->toArray());
+        $tenantsArray = $tenants->map(function($tenant) {
+            return [
+                $tenant->id,
+                $tenant->company_name,
+                $tenant->created_at
+            ];
+        })->toArray();
+        $this->table(['id', 'company_name', 'created_at'], $tenantsArray);
 
         if ($this->option('clean')) {
             $this->info('Cleaning up tenancy tables...');
