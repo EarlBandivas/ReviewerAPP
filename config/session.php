@@ -20,6 +20,10 @@ return [
 
     'driver' => env('SESSION_DRIVER', 'database'),
 
+    // Add these lines to increase the lock timeout
+    // 'lock_timeout' => env('SESSION_LOCK_TIMEOUT', 30),
+    // 'block_for' => env('SESSION_BLOCK_FOR', 10),
+
     /*
     |--------------------------------------------------------------------------
     | Session Lifetime
@@ -215,3 +219,4 @@ return [
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
 
 ];
+

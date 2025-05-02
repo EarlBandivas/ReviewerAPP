@@ -145,4 +145,27 @@ class TenancyServiceProvider extends ServiceProvider
             $this->app[\Illuminate\Contracts\Http\Kernel::class]->prependToMiddlewarePriority($middleware);
         }
     }
+
+    protected function configureDatabase()
+    {
+        return [
+            // Using a single database for all tenants...
+            // DatabaseConfig::singleDatabase(),
+
+            // Using a file-based tenancy driver...
+            // DatabaseConfig::fileBasedTenancy(),
+
+            // Using a connection-based tenancy driver...
+            DatabaseConfig::connectionBased(
+                // The connection name to switch to
+                config('tenancy.database.tenant_connection'),
+                
+                // The actual implementation that does the connection switching
+                new MySQLDatabaseManager,
+            ),
+        ];
+    }
 }
+
+
+

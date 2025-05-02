@@ -20,8 +20,10 @@ return [
     'domain_model' => Domain::class,
     
     'central_domains' => [
-        '127.0.0.1',
         'localhost',
+        '127.0.0.1',
+        'localhost:8000',
+        '127.0.0.1:8000',
         env('APP_DOMAIN', 'localhost'),
     ],
 
@@ -38,6 +40,10 @@ return [
                 '/forgot-password',
                 '/reset-password',
                 '/verify-email',
+                '/debug-tenancy',
+                '/debug-db',
+                '/check-db',
+                '/analytics',
             ],
         ],
     ],
@@ -49,6 +55,18 @@ return [
         Stancl\Tenancy\Bootstrappers\QueueTenancyBootstrapper::class,
     ],
 ];
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

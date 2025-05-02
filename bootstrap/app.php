@@ -34,11 +34,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'ensure.central.domain' => \App\Http\Middleware\EnsureCentralDomain::class,
             'prevent.tenant.registration' => \App\Http\Middleware\PreventTenantRegistration::class,
+            'tenant.init' => \App\Http\Middleware\CustomInitializeTenancyByDomain::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+
+
 
 
 

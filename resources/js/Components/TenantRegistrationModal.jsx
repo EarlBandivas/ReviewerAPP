@@ -101,7 +101,9 @@ export default function TenantRegistrationModal({
             <InputError message={errors.subdomain} className="mt-2" />
             <span className="mt-1 text-sm text-gray-500">
               Your site will be available at: {data.subdomain}.
-              {window.location.hostname}
+              {window.location.hostname.includes('127.0.0.1')
+                ? 'localhost:8080'
+                : window.location.hostname}
             </span>
           </div>
 

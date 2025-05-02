@@ -11,6 +11,12 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 {
     use HasDatabase, HasDomains;
 
+    // Add this method to explicitly define the database name format
+    public function getDatabaseName()
+    {
+        return config('tenancy.database.prefix') . $this->id;
+    }
+    
     protected $fillable = [
         'id',
         'company_name',
@@ -47,6 +53,8 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         ];
     }
 }
+
+
 
 
 

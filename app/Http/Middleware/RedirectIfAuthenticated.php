@@ -21,7 +21,13 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
-                return redirect()->route('dashboard', absolute: false);
+                // Make sure the dashboard route exists
+                if (Route::has('dashboard')) {
+                    return redirect()->route('dashboard', absolute: false);
+                } else {
+                    // Fallback to home if dashboard doesn't exist
+                    return redirect('/');
+                }
             }
         }
 

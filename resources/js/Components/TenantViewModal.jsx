@@ -66,7 +66,7 @@ export default function TenantViewModal({ show, onClose, tenant }) {
               </p>
               <p>
                 <strong>Full URL:</strong>{' '}
-                {`${window.location.protocol}//${tenant.id}.${window.location.host}`}
+                {`${window.location.protocol}//${tenant.id}.localhost:${window.location.port}`}
               </p>
             </div>
           </div>

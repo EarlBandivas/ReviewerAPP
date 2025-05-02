@@ -53,7 +53,8 @@ class TenantController extends Controller
             DB::beginTransaction();
             
             $subdomain = strtolower(trim($validated['subdomain']));
-            $fullDomain = $subdomain . '.' . config('app.domain');
+            // Use localhost:8080 instead of 127.0.0.1
+            $fullDomain = $subdomain . '.' . (env('APP_ENV') === 'local' ? 'localhost:8080' : env('APP_DOMAIN', 'localhost:8080'));
 
             // Check if domain exists
             $existingDomain = Domain::where('domain', $fullDomain)->first();
@@ -225,13 +226,16 @@ class TenantController extends Controller
                 ]);
 
                 try {
+                    // Make sure to use .localhost for local development
+                    $loginUrl = 'http://' . $tenant->id . '.localhost:8000';
+                    
                     Mail::to($tenant->contact_email)->send(new TenantApproved([
                         'companyName' => $tenant->company_name,
                         'contactName' => $tenant->contact_name,
                         'contact_email' => $tenant->contact_email,
                         'subdomain' => $tenant->id,
                         'password' => $password,
-                        'loginUrl' => 'https://' . $tenant->id . '.' . config('app.domain'),
+                        'loginUrl' => $loginUrl,
                     ]));
 
                     Log::info('Approval email sent successfully', [
@@ -373,6 +377,15 @@ class TenantController extends Controller
         }
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 

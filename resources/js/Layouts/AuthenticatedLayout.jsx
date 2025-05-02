@@ -11,6 +11,10 @@ export default function AuthenticatedLayout({ header, children }) {
     return <div>Not authenticated</div>; // Or redirect to login
   }
 
+  // Check if routes exist using Ziggy's Route.has() method
+  const hasProfileRoute = route().has('profile.edit');
+  const hasLogoutRoute = route().has('logout');
+
   return (
     <div className="min-h-screen bg-base-200">
       {/* Navbar */}
@@ -54,17 +58,29 @@ export default function AuthenticatedLayout({ header, children }) {
               tabIndex={0}
               className="dropdown-content menu menu-sm z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
             >
-              <li>
-                <Link href={route('profile.edit')} className="justify-between">
-                  Profile
-                  <span className="badge">New</span>
-                </Link>
-              </li>
-              <li>
-                <Link href={route('logout')} method="post" as="button">
-                  Logout
-                </Link>
-              </li>
+              {hasProfileRoute && (
+                <li>
+                  <Link
+                    href={route('profile.edit')}
+                    className="justify-between"
+                  >
+                    Profile
+                    <span className="badge">New</span>
+                  </Link>
+                </li>
+              )}
+              {hasLogoutRoute && (
+                <li>
+                  <Link href={route('logout')} method="post" as="button">
+                    Logout
+                  </Link>
+                </li>
+              )}
+              {!hasProfileRoute && !hasLogoutRoute && (
+                <li>
+                  <a href="/logout">Logout</a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
